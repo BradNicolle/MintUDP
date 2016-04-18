@@ -12,7 +12,7 @@ import java.util.concurrent.Future;
 
 public class UDPClient {
     public static final int MAX_PACKET_SIZE = 512;
-    private Map<Integer, MessageListener> listeners;
+    private Map<Integer, MessageListenerContainer> listeners;
     private final DatagramSocket socket;
     private final ExecutorService pool = Executors.newSingleThreadExecutor();
 
@@ -22,8 +22,8 @@ public class UDPClient {
         socket.connect(InetAddress.getByName(address), port);
     }
 
-    public UDPClient registerListener(MessageListener messageListener) {
-        listeners.put(hashClassName(messageListener.getType()), messageListener);
+    public UDPClient registerListener(Class<? extends Marshallable> type, MessageListener listener) {
+        listeners.put(hashClassName(type), new MessageListenerContainer(type, listener));
         return this;
     }
 
@@ -78,7 +78,7 @@ public class UDPClient {
         }
     }
 
-    private class ConnectionRequest implements Marshallable<ConnectionRequest> {
+    private class ConnectionRequest implements Marshallable {
         private String name;
 
         public ConnectionRequest(String name) {
@@ -116,13 +116,13 @@ public class UDPClient {
                     socket.receive(packet);
 
                     int classNameHash = ByteBuffer.wrap(buf, 0, 4).getInt();
-                    MessageListener listener = listeners.get(classNameHash);
+                    MessageListenerContainer listener = listeners.get(classNameHash);
 
                     if (listener != null) {
-                        Class<?> listenerClass = listener.getType().getClass();
+                        Class<? extends Marshallable> messageClass = listener.getType();
                         try {
-                            Marshallable message = (Marshallable) listenerClass.newInstance();
-                            listener.listen((Marshallable) message.unmarshal(buf));
+                            Marshallable message = messageClass.newInstance();
+                            listener.getListener().listen(message.unmarshal(buf));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

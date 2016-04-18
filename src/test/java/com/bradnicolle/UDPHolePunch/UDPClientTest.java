@@ -2,26 +2,18 @@ package com.bradnicolle.UDPHolePunch;
 
 import org.junit.Test;
 
+import java.util.concurrent.Future;
+
 public class UDPClientTest {
 
     @Test
     public void test() throws Exception {
-        UDPClient client = new UDPClient("localhost", 4445);
-        client.printListeners();
-        client.registerListener(new MessageListener() {
-            @Override
-            public void listen(Marshallable marshallable) {
-
-            }
-
-            @Override
-            public Class<? extends Marshallable> getType() {
-                return TestMessage.class;
-            }
-        });
+        /*UDPClient client = new UDPClient("localhost", 4445);
+        Future<UDPClientRegistry> registry = client.getRegistry("me");
+        registry.get();*/
     }
 
-    private class TestMessage implements Marshallable<TestMessage> {
+    private class TestMessage implements Marshallable {
         private String message;
 
         public TestMessage(String message) {

@@ -1,6 +1,6 @@
 package com.bradnicolle.UDPHolePunch;
 
-public interface Marshallable<T> {
+public interface Marshallable {
     byte[] marshal();
-    T unmarshal(byte[] data);
+    Marshallable unmarshal(byte[] data);
 }
