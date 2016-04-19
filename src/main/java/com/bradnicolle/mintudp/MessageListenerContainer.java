@@ -1,4 +1,4 @@
-package com.bradnicolle.UDPHolePunch;
+package com.bradnicolle.mintudp;
 
 public class MessageListenerContainer {
     private Class<? extends Marshallable> type;

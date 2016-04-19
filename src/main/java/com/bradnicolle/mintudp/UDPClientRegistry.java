@@ -1,4 +1,4 @@
-package com.bradnicolle.UDPHolePunch;
+package com.bradnicolle.mintudp;
 
 import java.util.ArrayList;
 import java.util.List;

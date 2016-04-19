@@ -1,9 +1,10 @@
-package com.bradnicolle.UDPHolePunch;
+package com.bradnicolle.mintudp;
 
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +21,9 @@ public class UDPClient {
         listeners = new ConcurrentHashMap<>();
         socket = new DatagramSocket();
         socket.connect(InetAddress.getByName(address), port);
+        ExecutorService receiveService = Executors.newSingleThreadExecutor();
+        ReceiveRunnable receiveRunnable = new ReceiveRunnable();
+        receiveService.submit(receiveRunnable);
     }
 
     public UDPClient registerListener(Class<? extends Marshallable> type, MessageListener listener) {
@@ -95,12 +99,7 @@ public class UDPClient {
     }
 
     private class ReceiveRunnable implements Runnable {
-        private final DatagramSocket socket;
         private boolean running = true;
-
-        public ReceiveRunnable() throws SocketException {
-            socket = new DatagramSocket();
-        }
 
         public void kill() {
             running = false;
@@ -122,7 +121,8 @@ public class UDPClient {
                         Class<? extends Marshallable> messageClass = listener.getType();
                         try {
                             Marshallable message = messageClass.newInstance();
-                            listener.getListener().listen(message.unmarshal(buf));
+                            byte[] messageBytes = Arrays.copyOfRange(buf, 4, packet.getLength());
+                            listener.getListener().listen(message.unmarshal(messageBytes));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

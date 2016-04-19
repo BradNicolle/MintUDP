@@ -1,4 +1,4 @@
-package com.bradnicolle.UDPHolePunch;
+package com.bradnicolle.mintudp;
 
 /**
  * Created by Brad on 17/04/2016.
