@@ -1,4 +1,4 @@
-package com.bradnicolle.mintudp;
+package com.bradnicolle.mintudp.common;
 
 public interface Marshallable {
     byte[] marshal();

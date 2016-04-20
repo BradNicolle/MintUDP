@@ -1,6 +1,6 @@
 package com.bradnicolle.mintudp.messages;
 
-import com.bradnicolle.mintudp.Marshallable;
+import com.bradnicolle.mintudp.common.Marshallable;
 
 public class StringMessage implements Marshallable {
     private String message;

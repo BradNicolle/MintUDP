@@ -1,9 +1,13 @@
-package com.bradnicolle.mintudp;
+package com.bradnicolle.mintudp.client;
+
+import com.bradnicolle.mintudp.common.Constants;
+import com.bradnicolle.mintudp.common.Marshallable;
+import com.bradnicolle.mintudp.common.UDPClientRegistry;
+import com.bradnicolle.mintudp.common.Utils;
+import com.bradnicolle.mintudp.messages.ConnectMessage;
 
 import java.io.IOException;
 import java.net.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,7 +16,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class UDPClient {
-    public static final int MAX_PACKET_SIZE = 512;
     private Map<Integer, MessageListenerContainer> listeners;
     private final DatagramSocket socket;
     private final ExecutorService pool = Executors.newSingleThreadExecutor();
@@ -27,8 +30,12 @@ public class UDPClient {
     }
 
     public UDPClient registerListener(Class<? extends Marshallable> type, MessageListener listener) {
-        listeners.put(hashClassName(type), new MessageListenerContainer(type, listener));
+        listeners.put(Utils.hashClassName(type), new MessageListenerContainer(type, listener));
         return this;
+    }
+
+    public void clearListeners() {
+        listeners.clear();
     }
 
     public void printListeners() {
@@ -37,64 +44,45 @@ public class UDPClient {
         }
     }
 
+    public void sendConnectMessage(String name) throws IOException, PacketLengthExceededException {
+        sendMessage(Constants.SERVER_ID, new ConnectMessage(name));
+    }
+
     public Future<UDPClientRegistry> getRegistry(String name) throws IOException, PacketLengthExceededException {
-        sendMessage(new ConnectionRequest(name));
+        sendMessage(Constants.SERVER_ID, new ConnectMessage(name));
         return pool.submit(() -> {
-            byte[] buf = new byte[MAX_PACKET_SIZE];
+            byte[] buf = new byte[Constants.MAX_PACKET_SIZE];
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
             return new UDPClientRegistry().unmarshal(buf);
         });
     }
 
-    public void sendMessage(Marshallable message) throws IOException, PacketLengthExceededException {
-        byte[] typeBuf = ByteBuffer.allocate(4)
-                            .order(ByteOrder.BIG_ENDIAN)
-                            .putInt(hashClassName(message.getClass()))
-                            .array();
-        byte[] messageBuf = message.marshal();
-        byte[] buf = new byte[typeBuf.length + messageBuf.length];
+    public void sendMessage(String recipientId, Marshallable message) throws IOException, PacketLengthExceededException {
+        sendMessage(Utils.hashString(recipientId), message);
+    }
 
-        if (buf.length > MAX_PACKET_SIZE) {
+    public void sendMessage(int recipientId, Marshallable message) throws IOException, PacketLengthExceededException {
+        byte[] recipientBuf = Utils.int2byteArr(recipientId);
+        byte[] typeBuf = Utils.int2byteArr(Utils.hashClassName(message.getClass()));
+        byte[] messageBuf = message.marshal();
+        byte[] buf = new byte[recipientBuf.length + typeBuf.length + messageBuf.length];
+
+        if (buf.length > Constants.MAX_PACKET_SIZE) {
             throw new PacketLengthExceededException(buf.length);
         }
 
-        System.arraycopy(typeBuf, 0, buf, 0, typeBuf.length);
-        System.arraycopy(messageBuf, 0, buf, typeBuf.length, messageBuf.length);
+        System.arraycopy(recipientBuf, 0, buf, 0, recipientBuf.length);
+        System.arraycopy(typeBuf, 0, buf, recipientBuf.length, typeBuf.length);
+        System.arraycopy(messageBuf, 0, buf, recipientBuf.length + typeBuf.length, messageBuf.length);
 
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
 
-    private int hashClassName(Class clazz) {
-        String className = clazz.getName();
-        // See http://stackoverflow.com/questions/2624192/good-hash-function-for-strings
-        int hash = 7;
-        for (int i = 0; i < className.length(); i++) {
-            hash = hash*31 + className.charAt(i);
-        }
-        return hash;
-    }
-
     public class PacketLengthExceededException extends Exception {
         public PacketLengthExceededException(int length) {
-            super("Packet length exceeded, max length is " + MAX_PACKET_SIZE + " bytes, yours was " + length);
-        }
-    }
-
-    private class ConnectionRequest implements Marshallable {
-        private String name;
-
-        public ConnectionRequest(String name) {
-            this.name = name;
-        }
-
-        public byte[] marshal() {
-            return name.getBytes();
-        }
-
-        public ConnectionRequest unmarshal(byte[] data) {
-            return new ConnectionRequest(new String(data));
+            super("Packet length exceeded, max length is " + Constants.MAX_PACKET_SIZE + " bytes, yours was " + length);
         }
     }
 
@@ -109,19 +97,19 @@ public class UDPClient {
         public void run() {
             while(running) {
                 try {
-                    byte[] buf = new byte[MAX_PACKET_SIZE];
+                    byte[] buf = new byte[Constants.MAX_PACKET_SIZE];
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
                     socket.receive(packet);
 
-                    int classNameHash = ByteBuffer.wrap(buf, 0, 4).getInt();
+                    int classNameHash = Utils.extractClassNameHash(buf);
                     MessageListenerContainer listener = listeners.get(classNameHash);
 
                     if (listener != null) {
                         Class<? extends Marshallable> messageClass = listener.getType();
                         try {
                             Marshallable message = messageClass.newInstance();
-                            byte[] messageBytes = Arrays.copyOfRange(buf, 4, packet.getLength());
+                            byte[] messageBytes = Utils.extractMessageBytes(buf, packet.getLength());
                             listener.getListener().listen(message.unmarshal(messageBytes));
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -133,5 +121,7 @@ public class UDPClient {
                 }
             }
         }
+
     }
+
 }

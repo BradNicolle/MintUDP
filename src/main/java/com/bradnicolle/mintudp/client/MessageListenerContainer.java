@@ -1,4 +1,6 @@
-package com.bradnicolle.mintudp;
+package com.bradnicolle.mintudp.client;
+
+import com.bradnicolle.mintudp.common.Marshallable;
 
 public class MessageListenerContainer {
     private Class<? extends Marshallable> type;
