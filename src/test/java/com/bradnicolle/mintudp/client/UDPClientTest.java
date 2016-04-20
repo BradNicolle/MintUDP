@@ -14,12 +14,18 @@ public class UDPClientTest {
         UDPServer server = new UDPServer(4445);
         server.start();
 
-        UDPClient client = new UDPClient("localhost", 4445);
+        UDPClient client1 = new UDPClient("localhost", 4445);
+        UDPClient client2 = new UDPClient("localhost", 4445);
         //client.registerListener(StringMessage.class, (message) -> System.out.println("Message: " + ((StringMessage) message).getMessage() + "FIN"));
         //client.sendMessage(Constants.SERVER_ID, new StringMessage("hello"));
+        client1.registerListener(StringMessage.class, (message) -> System.out.println("Geoff received message: " + ((StringMessage) message).getMessage() + "FIN"));
+        client2.registerListener(StringMessage.class, (message) -> System.out.println("George received message: " + ((StringMessage) message).getMessage() + "FIN"));
 
-        client.sendConnectMessage("Geoff");
-        client.sendConnectMessage("George");
+        client1.sendConnectMessage("Geoff");
+        client2.sendConnectMessage("George");
+
+        client1.sendMessage("George", new StringMessage("Hello George"));
+        client2.sendMessage("Geoff", new StringMessage("I am the lolrus!"));
     }
 
 }

@@ -8,7 +8,9 @@ import com.bradnicolle.mintudp.messages.ConnectMessage;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -55,6 +57,7 @@ public class UDPServer {
                     socket.receive(packet);
 
                     int recipientId = Utils.extractRecipientId(buf);
+                    // Server message
                     if (recipientId == Constants.SERVER_ID) {
                         System.out.println("I am the recipient");
                         int classNameHash = Utils.extractClassNameHash(buf);
@@ -64,8 +67,20 @@ public class UDPServer {
                                     new ConnectMessage().unmarshal(
                                             Utils.extractMessageBytes(buf, packet.getLength()));
                             String hostAddress = packet.getAddress().getHostAddress();
-                            registry.getList().add(new RemoteUDPClient(hostAddress, message.getName()));
+                            registry.getList().add(new RemoteUDPClient(hostAddress, message.getName(), packet.getPort()));
                             registry.printRegistry();
+                        }
+                    }
+                    // Client message, just route it to the desired client
+                    else {
+                        List<RemoteUDPClient> reg = registry.getList();
+                        for (RemoteUDPClient client : reg) {
+                            int hashedName = Utils.hashString(client.name);
+                            if (hashedName == recipientId) {
+                                DatagramPacket sendPacket =
+                                        new DatagramPacket(buf, packet.getLength(), InetAddress.getByName(client.host), client.port);
+                                socket.send(sendPacket);
+                            }
                         }
                     }
                 }
