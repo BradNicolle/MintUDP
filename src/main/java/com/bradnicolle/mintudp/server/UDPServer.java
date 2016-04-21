@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -70,7 +71,7 @@ public class UDPServer {
                                             Utils.extractMessageBytes(buf, packet.getLength()));
 
                             String hostAddress = packet.getAddress().getHostAddress();
-                            registry.getList().add(new RemoteUDPClient(hostAddress, message.getName(), packet.getPort()));
+                            registry.getList().put(Utils.hashString(message.getName()), new RemoteUDPClient(hostAddress, message.getName(), packet.getPort()));
                             registry.printRegistry();
 
                             // We can send -1 as recipientId because client doesn't check this
@@ -83,14 +84,12 @@ public class UDPServer {
 
                     // Client message, just route it to the desired client
                     else {
-                        List<RemoteUDPClient> reg = registry.getList();
-                        for (RemoteUDPClient client : reg) {
-                            int hashedName = Utils.hashString(client.name);
-                            if (hashedName == recipientId) {
-                                DatagramPacket sendPacket =
-                                        new DatagramPacket(buf, packet.getLength(), InetAddress.getByName(client.host), client.port);
-                                socket.send(sendPacket);
-                            }
+                        Map<Integer, RemoteUDPClient> reg = registry.getList();
+                        RemoteUDPClient client = reg.get(recipientId);
+                        if (client != null) {
+                            DatagramPacket sendPacket =
+                                    new DatagramPacket(buf, packet.getLength(), InetAddress.getByName(client.host), client.port);
+                            socket.send(sendPacket);
                         }
                     }
                 }
