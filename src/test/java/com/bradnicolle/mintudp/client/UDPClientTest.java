@@ -12,7 +12,7 @@ public class UDPClientTest {
         StringMessage t = new StringMessage("hello");
         System.out.println(t.getMessage());
 
-        UDPServer server = new UDPServer(4445);
+        UDPServer server = new UDPServer(4445, false);
         server.start();
 
         UDPClient client1 = new UDPClient("localhost", 4445);

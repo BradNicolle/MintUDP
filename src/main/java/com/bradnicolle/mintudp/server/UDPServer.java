@@ -23,11 +23,13 @@ public class UDPServer {
     private ScheduledExecutorService scheduledRegistryClean;
     private UDPClientRegistry registry;
     private boolean running = true;
+    private boolean clean = false;
 
     private final int CONNECT_MESSAGE_HASH = Utils.hashClassName(ConnectMessage.class);
+    private final int REGISTRY_CLEAN_DELAY = 60000;
 
 
-    public UDPServer(int port) {
+    public UDPServer(int port, boolean clean) {
         this.port = port;
         executorService = Executors.newSingleThreadExecutor();
         scheduledRegistryClean = Executors.newSingleThreadScheduledExecutor();
@@ -38,7 +40,7 @@ public class UDPServer {
         // TODO prevent from starting multiple servers here
         socket = new DatagramSocket(port);
         executorService.submit(new ServerRunnable());
-        scheduledRegistryClean.scheduleWithFixedDelay(() -> registry.getList().clear(), 1000, 2000, TimeUnit.MILLISECONDS);
+        if (clean) scheduledRegistryClean.scheduleWithFixedDelay(() -> registry.getList().clear(), REGISTRY_CLEAN_DELAY, REGISTRY_CLEAN_DELAY, TimeUnit.MILLISECONDS);
     }
 
     public void stop() {
