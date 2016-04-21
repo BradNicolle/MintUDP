@@ -1,5 +1,6 @@
 package com.bradnicolle.mintudp.common;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,12 +26,24 @@ public class UDPClientRegistry implements Marshallable {
     }
 
     public byte[] marshal() {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutput out = new ObjectOutputStream(bos)) {
+            out.writeObject(registry);
+            return bos.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
     public UDPClientRegistry unmarshal(byte[] data) {
-        List<RemoteUDPClient> reg = new ArrayList<>();
-        UDPClientRegistry reg2 = new UDPClientRegistry(reg);
-        return reg2;
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
+                ObjectInput in = new ObjectInputStream(bis)) {
+            List<RemoteUDPClient> list = (List<RemoteUDPClient>) in.readObject();
+            return new UDPClientRegistry(list);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

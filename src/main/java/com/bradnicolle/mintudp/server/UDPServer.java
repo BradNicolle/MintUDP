@@ -57,20 +57,28 @@ public class UDPServer {
                     socket.receive(packet);
 
                     int recipientId = Utils.extractRecipientId(buf);
+
                     // Server message
                     if (recipientId == Constants.SERVER_ID) {
-                        System.out.println("I am the recipient");
                         int classNameHash = Utils.extractClassNameHash(buf);
+
                         if (classNameHash == CONNECT_MESSAGE_HASH) {
-                            System.out.println("Connect message received");
                             ConnectMessage message =
                                     new ConnectMessage().unmarshal(
                                             Utils.extractMessageBytes(buf, packet.getLength()));
+
                             String hostAddress = packet.getAddress().getHostAddress();
                             registry.getList().add(new RemoteUDPClient(hostAddress, message.getName(), packet.getPort()));
                             registry.printRegistry();
+
+                            // We can send -1 as recipientId because client doesn't check this
+                            byte[] sendBuf = Utils.generateSendMessageBuffer(-1, registry);
+                            DatagramPacket sendPacket =
+                                    new DatagramPacket(sendBuf, sendBuf.length, packet.getAddress(), packet.getPort());
+                            socket.send(sendPacket);
                         }
                     }
+
                     // Client message, just route it to the desired client
                     else {
                         List<RemoteUDPClient> reg = registry.getList();

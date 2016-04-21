@@ -1,24 +1,19 @@
 package com.bradnicolle.mintudp.client;
 
-import com.bradnicolle.mintudp.common.Constants;
-import com.bradnicolle.mintudp.common.Marshallable;
-import com.bradnicolle.mintudp.common.UDPClientRegistry;
-import com.bradnicolle.mintudp.common.Utils;
+import com.bradnicolle.mintudp.common.*;
 import com.bradnicolle.mintudp.messages.ConnectMessage;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class UDPClient {
     private Map<Integer, MessageListenerContainer> listeners;
     private final DatagramSocket socket;
-    private final ExecutorService pool = Executors.newSingleThreadExecutor();
+
 
     public UDPClient(String address, int port) throws SocketException, UnknownHostException {
         listeners = new ConcurrentHashMap<>();
@@ -48,42 +43,15 @@ public class UDPClient {
         sendMessage(Constants.SERVER_ID, new ConnectMessage(name));
     }
 
-    public Future<UDPClientRegistry> getRegistry(String name) throws IOException, PacketLengthExceededException {
-        sendMessage(Constants.SERVER_ID, new ConnectMessage(name));
-        return pool.submit(() -> {
-            byte[] buf = new byte[Constants.MAX_PACKET_SIZE];
-            DatagramPacket packet = new DatagramPacket(buf, buf.length);
-            socket.receive(packet);
-            return new UDPClientRegistry().unmarshal(buf);
-        });
-    }
-
     public void sendMessage(String recipientId, Marshallable message) throws IOException, PacketLengthExceededException {
         sendMessage(Utils.hashString(recipientId), message);
     }
 
     public void sendMessage(int recipientId, Marshallable message) throws IOException, PacketLengthExceededException {
-        byte[] recipientBuf = Utils.int2byteArr(recipientId);
-        byte[] typeBuf = Utils.int2byteArr(Utils.hashClassName(message.getClass()));
-        byte[] messageBuf = message.marshal();
-        byte[] buf = new byte[recipientBuf.length + typeBuf.length + messageBuf.length];
-
-        if (buf.length > Constants.MAX_PACKET_SIZE) {
-            throw new PacketLengthExceededException(buf.length);
-        }
-
-        System.arraycopy(recipientBuf, 0, buf, 0, recipientBuf.length);
-        System.arraycopy(typeBuf, 0, buf, recipientBuf.length, typeBuf.length);
-        System.arraycopy(messageBuf, 0, buf, recipientBuf.length + typeBuf.length, messageBuf.length);
+        byte[] buf = Utils.generateSendMessageBuffer(recipientId, message);
 
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
-    }
-
-    public class PacketLengthExceededException extends Exception {
-        public PacketLengthExceededException(int length) {
-            super("Packet length exceeded, max length is " + Constants.MAX_PACKET_SIZE + " bytes, yours was " + length);
-        }
     }
 
     private class ReceiveRunnable implements Runnable {

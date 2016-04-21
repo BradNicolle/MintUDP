@@ -1,6 +1,8 @@
 package com.bradnicolle.mintudp.common;
 
-public class RemoteUDPClient {
+import java.io.Serializable;
+
+public class RemoteUDPClient implements Serializable {
     public String host;
     public String name;
     public int port;

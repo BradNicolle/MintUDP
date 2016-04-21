@@ -1,5 +1,9 @@
 package com.bradnicolle.mintudp.common;
 
+import com.bradnicolle.mintudp.client.UDPClient;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -18,6 +22,23 @@ public class Utils {
 
     public static byte[] extractMessageBytes(byte[] data, int length) {
         return Arrays.copyOfRange(data, 8, length);
+    }
+
+    public static byte[] generateSendMessageBuffer(int recipientId, Marshallable message) throws IOException, PacketLengthExceededException {
+        byte[] recipientBuf = Utils.int2byteArr(recipientId);
+        byte[] typeBuf = Utils.int2byteArr(Utils.hashClassName(message.getClass()));
+        byte[] messageBuf = message.marshal();
+        byte[] buf = new byte[recipientBuf.length + typeBuf.length + messageBuf.length];
+
+        if (buf.length > Constants.MAX_PACKET_SIZE) {
+            throw new PacketLengthExceededException(buf.length);
+        }
+
+        System.arraycopy(recipientBuf, 0, buf, 0, recipientBuf.length);
+        System.arraycopy(typeBuf, 0, buf, recipientBuf.length, typeBuf.length);
+        System.arraycopy(messageBuf, 0, buf, recipientBuf.length + typeBuf.length, messageBuf.length);
+
+        return buf;
     }
 
     public static byte[] int2byteArr(int data) {
