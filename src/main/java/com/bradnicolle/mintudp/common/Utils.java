@@ -1,9 +1,6 @@
 package com.bradnicolle.mintudp.common;
 
-import com.bradnicolle.mintudp.client.UDPClient;
-
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;

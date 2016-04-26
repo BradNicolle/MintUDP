@@ -1,5 +1,6 @@
 package com.bradnicolle.mintudp.client;
 
+import com.bradnicolle.mintudp.common.Marshallable;
 import com.bradnicolle.mintudp.common.UDPClientRegistry;
 import com.bradnicolle.mintudp.messages.StringMessage;
 import com.bradnicolle.mintudp.server.UDPServer;
@@ -19,12 +20,25 @@ public class UDPClientTest {
         UDPClient client2 = new UDPClient("localhost", 4445);
         //client.registerListener(StringMessage.class, (message) -> System.out.println("Message: " + ((StringMessage) message).getMessage() + "FIN"));
         //client.sendMessage(Constants.SERVER_ID, new StringMessage("hello"));
-        client1.registerListener(StringMessage.class, (message) -> System.out.println("Geoff received message: " + ((StringMessage) message).getMessage() + "FIN"));
-        client1.registerListener(UDPClientRegistry.class, (message) -> {
-            System.out.println("REGISTRY RECEIVED!!");
-            ((UDPClientRegistry) message).printRegistry();
+        client1.registerListener(StringMessage.class, new MessageListener() {
+            @Override
+            public void listen(Marshallable message) {
+                System.out.println("Geoff received message: " + ((StringMessage) message).getMessage() + "FIN");
+            }
         });
-        client2.registerListener(StringMessage.class, (message) -> System.out.println("George received message: " + ((StringMessage) message).getMessage() + "FIN"));
+        client1.registerListener(UDPClientRegistry.class, new MessageListener() {
+            @Override
+            public void listen(Marshallable message) {
+                System.out.println("REGISTRY RECEIVED!!");
+                ((UDPClientRegistry) message).printRegistry();
+            }
+        });
+        client2.registerListener(StringMessage.class, new MessageListener() {
+            @Override
+            public void listen(Marshallable message) {
+                System.out.println("George received message: " + ((StringMessage) message).getMessage() + "FIN");
+            }
+        });
 
         client2.sendConnectMessage("George");
         client1.sendConnectMessage("Geoff");

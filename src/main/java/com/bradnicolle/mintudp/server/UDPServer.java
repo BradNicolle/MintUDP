@@ -1,5 +1,6 @@
 package com.bradnicolle.mintudp.server;
 
+import com.bradnicolle.mintudp.client.MessageListener;
 import com.bradnicolle.mintudp.common.RemoteUDPClient;
 import com.bradnicolle.mintudp.common.UDPClientRegistry;
 import com.bradnicolle.mintudp.common.Constants;
@@ -41,7 +42,14 @@ public class UDPServer {
         // TODO prevent from starting multiple servers here
         socket = new DatagramSocket(port);
         executorService.submit(new ServerRunnable());
-        if (clean) scheduledRegistryClean.scheduleWithFixedDelay(() -> registry.getList().clear(), REGISTRY_CLEAN_DELAY, REGISTRY_CLEAN_DELAY, TimeUnit.MILLISECONDS);
+        if (clean) {
+            scheduledRegistryClean.scheduleWithFixedDelay(new Runnable() {
+                @Override
+                public void run() {
+                    registry.getList().clear();
+                }
+            }, REGISTRY_CLEAN_DELAY, REGISTRY_CLEAN_DELAY, TimeUnit.MILLISECONDS);
+        }
     }
 
     public void stop() {
